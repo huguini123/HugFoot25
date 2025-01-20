@@ -1,8 +1,10 @@
-import React, { useEffect, useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   Container,
+  Box,
   Typography,
+  Button,
   Paper,
   Table,
   TableBody,
@@ -10,80 +12,59 @@ import {
   TableContainer,
   TableHead,
   TableRow,
-  Box,
-  Chip,
-  Button,
 } from '@mui/material';
-import { SportsSoccer as SoccerIcon } from '@mui/icons-material';
-import Header from '../components/Header';
-import { db, Team, Player } from '../database/db';
+import { useGame } from '../contexts/GameContext';
+import { db } from '../database/db';
+import type { Player } from '../database/db';
 
-const TeamPage: React.FC = () => {
+export default function Team() {
   const navigate = useNavigate();
-  const [team, setTeam] = useState<Team | null>(null);
+  const { gameState } = useGame();
   const [players, setPlayers] = useState<Player[]>([]);
 
   useEffect(() => {
-    const loadTeamData = async () => {
-      try {
-        // Carrega o primeiro time (por enquanto)
-        const firstTeam = await db.teams.toArray();
-        if (firstTeam.length > 0) {
-          setTeam(firstTeam[0]);
-          const teamPlayers = await db.players
-            .where('teamId')
-            .equals(firstTeam[0].id!)
-            .toArray();
-          setPlayers(teamPlayers);
-        }
-      } catch (error) {
-        console.error('Erro ao carregar dados do time:', error);
-      }
+    if (!gameState?.team) {
+      navigate('/');
+      return;
+    }
+
+    const loadPlayers = async () => {
+      if (!gameState?.team?.id) return;
+      const teamPlayers = await db.players.where('teamId').equals(gameState.team.id).toArray();
+      setPlayers(teamPlayers);
     };
 
-    loadTeamData();
-  }, []);
+    loadPlayers();
+  }, [gameState, navigate]);
 
-  if (!team) {
-    return <Typography>Carregando...</Typography>;
-  }
-
-  const formatMoney = (value: number) => {
-    return new Intl.NumberFormat('pt-BR', {
-      style: 'currency',
-      currency: 'BRL'
-    }).format(value);
+  const handlePlayMatch = () => {
+    navigate('/match');
   };
 
+  if (!gameState?.team) return null;
+
   return (
-    <>
-      <Header />
-      <Container maxWidth="lg" sx={{ mt: 4 }}>
-        <Box sx={{ mb: 4 }}>
-          <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
-            <Typography variant="h4">
-              {team.name}
+    <Container maxWidth="lg" sx={{ py: 4 }}>
+      <Paper elevation={3} sx={{ p: 3, borderRadius: 4 }}>
+        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 4 }}>
+          <Box>
+            <Typography variant="h4" gutterBottom>{gameState.team.name}</Typography>
+            <Typography variant="subtitle1" color="text.secondary">
+              Treinador: {gameState.team.manager}
+            </Typography>
+          </Box>
+          <Box>
+            <Typography variant="h6" sx={{ mb: 1 }}>
+              Dinheiro: R$ {gameState.money.toLocaleString()}
             </Typography>
             <Button
               variant="contained"
               color="primary"
-              startIcon={<SoccerIcon />}
-              onClick={() => navigate('/match')}
+              onClick={handlePlayMatch}
+              fullWidth
             >
               Jogar Partida
             </Button>
-          </Box>
-          <Box sx={{ display: 'flex', gap: 2 }}>
-            <Chip
-              label={`Dinheiro: ${formatMoney(team.money)}`}
-              color="primary"
-              variant="outlined"
-            />
-            <Chip
-              label={`Reputação: ${team.reputation}`}
-              color="secondary"
-              variant="outlined"
-            />
           </Box>
         </Box>
 
@@ -92,28 +73,26 @@ const TeamPage: React.FC = () => {
             <TableHead>
               <TableRow>
                 <TableCell>Nome</TableCell>
-                <TableCell>Posição</TableCell>
+                <TableCell align="right">Posição</TableCell>
                 <TableCell align="right">Habilidade</TableCell>
-                <TableCell align="right">Idade</TableCell>
-                <TableCell align="right">Salário</TableCell>
+                <TableCell align="right">Energia</TableCell>
               </TableRow>
             </TableHead>
             <TableBody>
               {players.map((player) => (
                 <TableRow key={player.id}>
-                  <TableCell>{player.name}</TableCell>
-                  <TableCell>{player.position}</TableCell>
+                  <TableCell component="th" scope="row">
+                    {player.name}
+                  </TableCell>
+                  <TableCell align="right">{player.position}</TableCell>
                   <TableCell align="right">{player.skill}</TableCell>
-                  <TableCell align="right">{player.age}</TableCell>
-                  <TableCell align="right">{formatMoney(player.salary)}</TableCell>
+                  <TableCell align="right">{player.energy}%</TableCell>
                 </TableRow>
               ))}
             </TableBody>
           </Table>
         </TableContainer>
-      </Container>
-    </>
+      </Paper>
+    </Container>
   );
-};
-
-export default TeamPage; 
+} 

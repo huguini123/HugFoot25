@@ -6,6 +6,7 @@ export interface Team {
   name: string;
   money: number;
   reputation: number;
+  manager: string;
 }
 
 export interface Player {
@@ -14,8 +15,7 @@ export interface Player {
   name: string;
   position: string;
   skill: number;
-  salary: number;
-  age: number;
+  energy: number;
 }
 
 export interface Match {
